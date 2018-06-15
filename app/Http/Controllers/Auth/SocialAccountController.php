@@ -26,16 +26,37 @@ class SocialAccountController extends Controller
         }
 
         $authUser = $this->findOrCreateUser($user, $provider);
-        
+
         Auth::login($authUser, false);
 
         return redirect($this->redirectTo);
     }
 
-    public function findOrCreateUser($user, $provider)
+    public function findOrCreateUser($socialUser, $provider)
     {
-        $user = SocialAccount::query()->findOrNew($user->id, $provider);
+        $socialUser = SocialAccount::query()
+                                   ->where('provider_name', $provider)
+                                   ->where('provider_id', $socialUser->id)
+                                   ->first();
 
-        return $user;
+        if ($socialUser) {
+            return $socialUser->user;
+        } else {
+            $user = User::query()->where('email', $socialUser->email)->first();
+
+            if ( ! $user) {
+                User::query()->create([
+                    'name'  => $socialUser->name,
+                    'email' => $socialUser->email,
+                ]);
+            }
+
+            $user->socialAccounts->create([
+                'provider'    => $provider,
+                'provider_id' => $socialUser->id,
+            ]);
+
+            return $user;
+        }
     }
 }
