@@ -35,24 +35,24 @@ class SocialAccountController extends Controller
     public function findOrCreateUser($socialUser, $provider)
     {
         $socialUser = SocialAccount::query()
-                                   ->where('provider_name', $provider)
-                                   ->where('provider_id', $socialUser->id)
-                                   ->first();
+            ->where('provider_name', $provider)
+            ->where('provider_id', $socialUser->id)
+            ->first();
 
         if ($socialUser) {
             return $socialUser->user;
         } else {
             $user = User::query()->where('email', $socialUser->email)->first();
 
-            if ( ! $user) {
+            if (!$user) {
                 User::query()->create([
-                    'name'  => $socialUser->name,
+                    'name' => $socialUser->name,
                     'email' => $socialUser->email,
                 ]);
             }
 
             $user->socialAccounts->create([
-                'provider'    => $provider,
+                'provider' => $provider,
                 'provider_id' => $socialUser->id,
             ]);
 
