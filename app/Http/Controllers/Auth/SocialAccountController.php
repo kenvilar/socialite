@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Http\Controllers\Controller;
 use App\SocialAccount;
 use App\User;
-use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Auth;
+use Exception;
+
+;
+
 use Laravel\Socialite\Facades\Socialite;
-use Mockery\Exception;
+use Illuminate\Support\Facades\Auth;
 
 class SocialAccountController extends Controller
 {
@@ -21,39 +23,38 @@ class SocialAccountController extends Controller
     {
         try {
             $user = Socialite::driver($provider)->user();
-        } catch (Exception $exception) {
-            return redirect()->route('login');
+        } catch (Exception $e) {
+            return redirect('/login');
         }
 
         $authUser = $this->findOrCreateUser($user, $provider);
 
-        Auth::login($authUser, false);
+        Auth::login($authUser, true);
 
-        return redirect($this->redirectTo);
+        return redirect('/home');
     }
 
     public function findOrCreateUser($socialUser, $provider)
     {
-        $socialUser = SocialAccount::query()
-            ->where('provider_name', $provider)
-            ->where('provider_id', $socialUser->id)
+        $account = SocialAccount::where('provider_name', $provider)
+            ->where('provider_id', $socialUser->getId())
             ->first();
 
-        if ($socialUser) {
-            return $socialUser->user;
+        if ($account) {
+            return $account->user;
         } else {
-            $user = User::query()->where('email', $socialUser->email)->first();
+            $user = User::where('email', $socialUser->getEmail())->first();
 
             if (!$user) {
-                User::query()->create([
-                    'name' => $socialUser->name,
-                    'email' => $socialUser->email,
+                $user = User::create([
+                    'email' => $socialUser->getEmail(),
+                    'name' => $socialUser->getName(),
                 ]);
             }
 
-            $user->socialAccounts->create([
-                'provider' => $provider,
-                'provider_id' => $socialUser->id,
+            $user->socialAccounts()->create([
+                'provider_name' => $provider,
+                'provider_id' => $socialUser->getId(),
             ]);
 
             return $user;
